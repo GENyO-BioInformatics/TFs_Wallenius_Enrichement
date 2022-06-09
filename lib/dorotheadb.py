@@ -1,4 +1,6 @@
-import pandas, os, subprocess, pyreadr
+import pandas
+import os
+import pyreadr
 
 # annotationDBfiles = glob.glob('data/*.tsv')[:-1]; annotationDBfile = annotationDBfiles[0]
 # organisms = [10090, 9606]
@@ -7,11 +9,11 @@ import pandas, os, subprocess, pyreadr
 #     annotationDBdf = annotationDBdf.loc[annotationDBdf.organism.isin(organisms),]
 #     annotationDBdf.to_csv(annotationDBfile,sep='\t',index=False)
 
-def getDorotheaDB(dorotheaDBfile = 'data/dorothea.tsv',org = 9606,confidence=['A','B','C']):
+def getDorotheaDB(dorotheaDBfile = 'data/dorothea.tsv', org = 9606, confidence='C'):
     if os.path.exists(dorotheaDBfile):
         dorotheaDBdf = pandas.read_csv(dorotheaDBfile,sep='\t')
         dorotheaDBdf = dorotheaDBdf.loc[dorotheaDBdf.org == org]
-        dorotheaDBdf = dorotheaDBdf.loc[dorotheaDBdf.confidence.isin(confidence)]
+        dorotheaDBdf = dorotheaDBdf.loc[dorotheaDBdf.confidence <= confidence]
         return(dorotheaDBdf)
     else:
         dorotheaDBurls = ['https://github.com/saezlab/dorothea/raw/master/data/dorothea_mm.rda',
