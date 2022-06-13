@@ -55,7 +55,7 @@ annTable = annTable.loc[annTable.symbol.isin(dorotheadb.target)]
 
 tfs = list(set(dorotheadb.loc[dorotheadb.tf.isin(tfs)].tf.tolist()))
 
-print("List of TFs to use:", " ".join(tfs))
+# print("List of TFs to use:", " ".join(tfs))
 
 if len(tfs) == 0:
     print("Error")
@@ -97,7 +97,8 @@ terms = list(set(annTable.annotation_id))
 
 N = len(list(set(annTable.symbol.tolist())))
 
-print("Testing "+str(len(targetGenes))+" target genes in "+str(len(terms))+" terms.")
+# print("Testing "+str(len(targetGenes))+" target genes in "+str(len(terms))+" terms.")
 pvals = [calculate_pvalues(term,weigth,annTableDict,universeGenes,targetGenes,N) for term in terms]
 pvals = pandas.concat(pvals)
+pvals["tfs"] = [",".join(tfs)]*len(pvals.index)
 pvals.to_csv(out,sep="\t",index=None)
