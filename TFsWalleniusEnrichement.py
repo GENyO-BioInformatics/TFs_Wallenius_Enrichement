@@ -5,7 +5,7 @@ from collections import defaultdict
 import sys
 import argparse
 import numpy
-from lib.dorotheadb import *
+from lib.collectridb import *
 from lib.calculate_stats import *
 from statsmodels.stats.multitest import multipletests
 import json
@@ -42,18 +42,20 @@ else:
 
 
 # Read databases
-dorotheadb = getDorotheaDB(confidence=database, org=organism)
+collectridbfile = '/home/eidriangm/Desktop/TFs_Wallenius_Enrichement/data/collectri.tsv'
+collectridb = pandas.read_csv(collectridbfile,sep='\t')
+
 annFileTable = "data/"+annotation+".tsv"
 annTable = pandas.read_csv(annFileTable, sep="\t")
 annTable = annTable.loc[annTable.organism == organism]
 
 # Filter databases
-dorotheadb = dorotheadb.loc[dorotheadb.target.isin(annTable.symbol)]
-annTable = annTable.loc[annTable.symbol.isin(dorotheadb.target)]
+collectridb = collectridb.loc[collectridb.target.isin(annTable.symbol)]
+annTable = annTable.loc[annTable.symbol.isin(collectridb.target)]
 
 # Prepare params
 
-tfs = list(set(dorotheadb.loc[dorotheadb.tf.isin(tfs)].tf.tolist()))
+tfs = list(set(collectridb.loc[collectridb.tf.isin(tfs)].tf.tolist()))
 
 # print("List of TFs to use:", " ".join(tfs))
 
@@ -63,7 +65,7 @@ if len(tfs) == 0:
     sys.exit()
 
 universeGenes = list(set(annTable.symbol.tolist()))
-targetGenes = list(set(dorotheadb.loc[dorotheadb.tf.isin(tfs)].target.tolist()))
+targetGenes = list(set(collectridb.loc[collectridb.tf.isin(tfs)].target.tolist()))
 
 biasFile = "data/"+database+"_"+annotation+".json"
 
@@ -72,7 +74,7 @@ if os.path.exists(biasFile):
     bias = json.load(f)
     f.close()
 else:
-    bias = {gene:len(dorotheadb.loc[dorotheadb.target.isin([gene])].tf.tolist()) for gene in universeGenes}
+    bias = {gene:len(collectridb.loc[collectridb.target.isin([gene])].tf.tolist()) for gene in universeGenes}
     f = open(biasFile, "w")
     json.dump(bias, f)
     f.close()
