@@ -1,8 +1,3 @@
----
-output:
-  pdf_document: default
----
-
 # TFs Enrichment Analysis Bias Addressing
 
 This github repository contains all the information necessary to perform and exhaustive evaluation of the Singular Enrichment Analysis (SEA) of transcription factors (TFs). 
@@ -76,9 +71,11 @@ The folder *use_case* contain all the scripts necessary to do a SEA
 
 ## Figures' data and scripts
 
-The folder *figures_data_n_scripts* exploit the base data and the results from the random lists analysis and the use case.
+The folder *figures_data_n_scripts* exploit the base data and the results from the random lists analysis and the use case. All plots are in .tiff and .png
 
-1. 
+1. randomListsResults_plots.R generate box plots of the annotations significancy frequency:
+  1.1 RandomTFsHypergeom_terms | RandomTFsHypergeom_ids 
+  1.2 RandomTFtargetsLists
 
 ## Other folders
 
@@ -88,6 +85,9 @@ Contain helper functions of main script
 ## extra_documentation
 Other markdowns used to guide our research by annotating questions and answers.
 
+# TO DOs
+
+1. Be sure to always use annotation id for the unique identifier of the database, and term for the human understandable description of the id. Check scripts.
 
 
 

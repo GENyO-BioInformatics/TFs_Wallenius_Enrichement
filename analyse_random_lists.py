@@ -188,7 +188,7 @@ try:
   #     pvals_TFsWalle = {key:nchypergeom_wallenius.sf(TargetsTFs_xs[key] - 1,TargetsTFs_N,TargetsTFs_ms[key],TargetsTFs_k, oddsRatios[key])
   #                                                      for key,value in TargetsTFs_xs.items()}
   
-  resultsDF = pandas.DataFrame({'terms':dict(zip(allTerms,allTerms)),
+  resultsDF = pandas.DataFrame({'annotation_id':dict(zip(allTerms,allTerms)),
                                               'TFs_InputSize':TFsk, 
                                               'TFs_InputInAnnot':TFsxs, 
                                               'TFs_GenesAnnoted':TFsms, 

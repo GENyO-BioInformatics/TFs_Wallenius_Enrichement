@@ -131,5 +131,40 @@ for (summarystatsFile in summarystatsFiles[-1]){
 masterSummaryOutFile <- 'data/EnrResults/masterSummary.tsv'
 write.table(masterSummaryDF, masterSummaryOutFile, sep='\t',quote = F,row.names = F,col.names = T)
 
+# CREATION OF MELTED TABLES TO EASILY EXPLORE IN EXCEL #############
+masterDF <- read.delim("data/EnrResults/masterSummary.tsv") 
+masterDF$annotation <- gsub('_', ' ', masterDF$annotation)
+annotInfo <- read.delim("data/annotation_info_table.tsv")
+masterDF <- merge(annotInfo,masterDF,by.x ="annotation_id",by.y = "terms",all.y = T)
 
+fullContent <- as.data.table(masterDF)
+
+idCols <- c("annotation_id", "term","size","annotation")
+permutationsCountCols <- colnames(fullContent)[grep("Count",colnames(fullContent))]
+permutMeltedDF <- melt(fullContent, id.vars=idCols, measure.vars=permutationsCountCols)
+colnames(permutMeltedDF) <- c(idCols,"typeOfAnalysis","p_times")
+permutMeltedDF$typeOfAnalysis <- gsub("Count","",permutMeltedDF$typeOfAnalysis)
+
+rankMedianCols <- colnames(fullContent)[grep("Median",colnames(fullContent))]
+rankMedianMeltedDF <- melt(fullContent, id.vars=idCols, measure.vars=rankMedianCols)
+colnames(rankMedianMeltedDF) <- c(idCols,"typeOfAnalysis","RankingMedian")
+rankMedianMeltedDF$typeOfAnalysis <- gsub("ranking_|_Median","",rankMedianMeltedDF$typeOfAnalysis)
+
+q1Cols <- colnames(fullContent)[grep("Q1",colnames(fullContent))]
+q1MeltedDF <- melt(fullContent, id.vars=idCols, measure.vars=q1Cols)
+colnames(q1MeltedDF) <- c(idCols,"typeOfAnalysis","RankingQ1")
+q1MeltedDF$typeOfAnalysis <- gsub("ranking_|_Q1","",q1MeltedDF$typeOfAnalysis)
+
+q3Cols <- colnames(fullContent)[grep("Q3",colnames(fullContent))]
+q3MeltedDF <- melt(fullContent, id.vars=idCols, measure.vars=q3Cols)
+colnames(q3MeltedDF) <- c(idCols,"typeOfAnalysis","RankingQ3")
+q3MeltedDF$typeOfAnalysis <- gsub("ranking_|_Q3","",q3MeltedDF$typeOfAnalysis)
+
+fullContentMelted <- merge(merge(merge(permutMeltedDF,rankMedianMeltedDF),q1MeltedDF),q3MeltedDF)
+
+TFsSEAresults <- fullContentMelted[fullContentMelted$typeOfAnalysis == "TFs_Hypergeom" & !is.na(fullContentMelted$p_times),]
+write.table(TFsSEAresults,"data/EnrResults/TFsSEAresultsMelted.tsv",sep = "\t",quote = F,row.names = F,col.names = T)
+
+TargetsSEAresults <- fullContentMelted[fullContentMelted$typeOfAnalysis != "TFs_Hypergeom",]
+write.table(TargetsSEAresults,"data/EnrResults/TargetsSEAresultsMelted.tsv",sep = "\t",quote = F,row.names = F,col.names = T)
 

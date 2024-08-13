@@ -1,127 +1,117 @@
-############# Plots Collectri Targets and TFs distribution in Annotations DBs 
-"
-This plot answers the questions:
-1- How is the distribution of targets per annotation? 
-2- How is the distribution of TFs per annotation?
-
-"
-
 library(vroom)
 library(ggplot2)
 library(ggrepel)
 #source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
-library(ggpp)
 library(tidyverse)
-library(ggdist)
 library(colorspace)
 library(ggrepel)
+library(cowplot)
+set.seed(1234)
 
-TargetsSEA <- read.delim("data/EnrResults/TargetsSEAresultsMelted.tsv")
-TargetsSEA$annotation <- gsub('_',' ',TargetsSEA$annotation)
-
-boxplot_limits <- function(data) {
-  box_stats <- boxplot.stats(data)$stats
-  list(
-    lower_whisker = box_stats[1],
-    q1 = box_stats[2],
-    median = box_stats[3],
-    q3 = box_stats[4],
-    upper_whisker = box_stats[5]
-  )
-}
-
-bx_limits <- TargetsSEA %>%
-  group_by(annotation) %>%
-  summarise(stats = list(boxplot_limits(RankingIQR))) %>%
-  unnest_wider(stats)
-
-n_exceed_limits <- TargetsSEA %>% 
-  group_by(annotation) %>% 
-  mutate(total = n()) %>%
-  ungroup() %>%
-  inner_join(bx_limits) %>%
-  filter(RankingIQR > upper_whisker) %>% 
-  group_by(annotation) %>%
-  mutate(filtered = n()) %>%
-  ungroup() %>%
-  select(annotation, total, filtered, upper_whisker) %>%
-  unique() %>%
-  mutate(freq = filtered / total)
-
+currentScriptDir <- dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(file.path(currentScriptDir,".."))
 colors_blind <- c("KEGG" = "#979A61",
                   "GO BP" = "#3d91e0",
                   "WikiPathways" = "#D974A0",
                   "Reactome" = "#f1b620")
-
-point_coords <- c()
-
-set.seed(1234)
-TargetsSEA <- TargetsSEA %>% group_by(annotation) %>% mutate(n =n(), y_vals = runif(n, -0.2, 0.2)) %>% 
-  mutate(annotation = factor(annotation, levels = names(colors_blind))) %>% ungroup() %>%
-  mutate(db_numeric = as.numeric(factor(annotation)))
-
-n_exceed_limits <- n_exceed_limits %>% mutate(annotation = factor(annotation, levels = names(colors_blind))) %>%
-  mutate(db_numeric = as.numeric(factor(annotation)))
-
-top_genes <- TargetsSEA %>% arrange(desc(RankingIQR)) %>% group_by(annotation) %>% slice_head(n=5)
-top_genes <- top_genes %>% mutate(annotation = factor(annotation, levels = names(colors_blind))) %>%
-  mutate(db_numeric = as.numeric(factor(annotation)))
+l_color <- lighten(colors_blind, 0.2)
+d_color <- darken(colors_blind, 0.2)
+color_pal <- c("Hypergeometric" = d_color, "Non-Central Hypergeometric" = l_color)
 
 
-gg <- ggplot(data = TargetsSEA, aes(x = RankingIQR)) +
-  geom_point(aes(
-    y = as.numeric(factor(annotation)) + y_vals,
-    color = annotation,
-    size = RankingIQR
-  )) +
-  geom_boxplot(
-    aes(
-      y = annotation,
-      color = annotation,
-      color = after_scale(darken(color, .5, space = "HLS")),
-      fill = after_scale(desaturate(lighten(color, .8), .4))
-    ),
-    outlier.shape = NA,
-    alpha = 0.8,
-    width = 0.5,
-    linewidth = 0.5
-  ) +
-  scale_y_discrete(labels = levels(TargetsSEA$annotation)) +
-  labs(x = "IQR Associated to Each Annotation") +
-  theme_classic() +
-  theme(axis.title.y = element_blank(), legend.position = "none") +
-  scale_size(range = c(0.01, 2)) +
-  stat_boxplot(
-    geom = 'errorbar',
-    aes(
-      y = annotation,
-      color = annotation,
-      color = after_scale(darken(color, .5, space = "HLS")),
-    ),
-    width = .3,
-    linewidth = 0.5
-  ) +
-  geom_segment(
-    data = n_exceed_limits,
-    aes(
-      y = as.numeric(factor(annotation)) + 0.3,
-      x = upper_whisker,
-      yend = as.numeric(factor(annotation)) + 0.3,
-      xend = upper_whisker + 20
-    ),
-    arrow = arrow(length = unit(0.1, "cm"))
-  ) +
-  scale_fill_manual(values = colors_blind) +
-  scale_color_manual(values = colors_blind) +
-  geom_text_repel(
-    data = top_genes,
-    aes(y = as.numeric(factor(annotation)) + y_vals, label = annotation_id),
-    seed = 1234,
+TargetsSEA <- read.delim("data/EnrResults/TargetsSEAresultsMelted.tsv")
+TargetsSEA <- TargetsSEA[grep("Target_",TargetsSEA$typeOfAnalysis),] 
+TargetsSEA$annotation <- gsub('_',' ',TargetsSEA$annotation)
+TargetsSEA$RankingMedian
+table(TargetsSEA$typeOfAnalysis)
+
+
+topToShow <- 15
+
+topBiassedAnnotsDF <- TargetsSEA[TargetsSEA$typeOfAnalysis == "Target_Hypergeom",] %>% arrange(RankingMedian) %>% group_by(annotation,size) %>% slice_head(n=topToShow)
+topBiassedAnnotsDF <- TargetsSEA[TargetsSEA$annotation_id %in% unique(topBiassedAnnotsDF$annotation_id),]
+
+topBiassedAnnotsDF$IQR <- topBiassedAnnotsDF$RankingQ3 - topBiassedAnnotsDF$RankingQ1
+
+write.table(topBiassedAnnotsDF,file = "figures_data_n_scripts/RankingPlots_topBiassedAnnots.tsv",sep = "\t",quote = F,row.names = F,col.names = T)
+
+topBiassedAnnotsDF <- topBiassedAnnotsDF %>% mutate(typeOfAnalysis = ifelse(typeOfAnalysis == "Target_Hypergeom", "Hypergeometric", "Non-Central Hypergeometric"))
+
+topBiassedAnnotsDF$class <- paste0(topBiassedAnnotsDF$typeOfAnalysis,".",topBiassedAnnotsDF$annotation)
+topBiassedAnnotsDF$colors <- color_pal[match(topBiassedAnnotsDF$class,names(color_pal))]
+
+topBiassedAnnotsDF <- topBiassedAnnotsDF %>% mutate(annotation = factor(annotation, levels = names(colors_blind)), size=factor(size,levels = sort(unique(size)))) 
+
+topBiassedAnnotsDF <- topBiassedAnnotsDF %>% group_by(typeOfAnalysis) %>% mutate(n = n(), x_vals = runif(n, -0.2, 0.2)) %>% ungroup() %>%  mutate(x_vals = ifelse(typeOfAnalysis == "Hypergeometric", x_vals -0.25, x_vals + 0.25))
+
+
+annotRankingTops <- list()
+for (ann in levels(topBiassedAnnotsDF$annotation)){
+  sub_topBiassedAnnotsDF <- topBiassedAnnotsDF[topBiassedAnnotsDF$annotation == ann,]
+  annotRankingTops[[ann]] <- ggplot(data = sub_topBiassedAnnotsDF, aes(y = RankingMedian)) +
+      geom_point(aes(x = as.numeric(size) + x_vals, y = RankingMedian,
+                     color = class, fill = class),
+                     size = 0.5, stroke = 0) + 
+      geom_pointrange(aes(x = as.numeric(factor(size)) + x_vals,
+                        color = class, fill = class, ymin = RankingQ1, ymax = RankingQ3),
+                    linetype='solid',
+                    size = 0.001, fatten = 0.01) +
+    scale_x_discrete(labels = levels(sub_topBiassedAnnotsDF$size))+
+    theme_classic() +
+    theme(legend.position = "bottom", text = element_text(size = 6)) +
+    scale_fill_manual(values = color_pal,guide = 'none') +
+    scale_color_manual(values = color_pal,guide = 'none') + 
+    geom_text_repel(data = sub_topBiassedAnnotsDF,
+    aes(x = as.numeric(factor(size)) + x_vals,
+        y = RankingMedian,
+        label = swr(term,15)),
+    seed = 343435,
     min.segment.length = unit(0, "lines"),
     segment.size = 0.2,
-    size = 2
-  )
+    size = 2,
+    lineheight = 0.6,
+    box.padding = 0.5,
+    force_pull = 1) + 
+    xlab("Size of TFs Lists") +
+    ylab("Median Ranking Position") 
+}
+gg <- plot_grid(plotlist = annotRankingTops)
+ggsave("figures_data_n_scripts/RankingRandomTFtargetsLists_terms.png", plot = gg,units = "cm",height = 9, width = 15,dpi = 600, bg = "white")
+# ggsave("figures_data_n_scripts/RankingRandomTFtargetsLists_terms.tiff", plot = gg,units = "cm",height = 9, width = 15,dpi = 600, bg = "white")
 
-ggsave("TargetsSEAresults_IQRBoxplot.tiff", plot = gg,units = "cm",height = 12, width = 20,dpi = 500,
-       compression = "lzw",bg = "white")
+
+############ THE SAME BUT WITH FACET_WRAP
+
+gg <- ggplot(data = topBiassedAnnotsDF, aes(y = RankingMedian)) +
+  geom_pointrange(aes(x = as.numeric(size) + x_vals,
+                      color = class, fill = class, 
+                      ymin = RankingQ1, ymax = RankingQ3),
+                  linetype='solid',
+                  size = 0.001, fatten = 0.01) +
+  geom_point(aes(x = as.numeric(size) + x_vals, y = RankingMedian,
+                 color = class, fill = class),
+             size = 0, stroke = 0) + 
+  scale_x_discrete(labels = levels(topBiassedAnnotsDF$size))+
+  theme_classic() +
+  theme(legend.position = "bottom", text = element_text(size = 6)) +
+  scale_fill_manual(values = color_pal,guide = 'none') +
+  scale_color_manual(values = color_pal,guide = 'none') + 
+  xlab("Size of TFs Lists") +
+  ylab("Median Ranking Position") + 
+  geom_text_repel(data = topBiassedAnnotsDF,
+                  aes(x = size,
+                      y = RankingMedian,
+                      label = swr(term,15)),
+                  seed = 343435,
+                  min.segment.length = unit(0, "lines"),
+                  segment.size = 0.2,
+                  size = 2,
+                  lineheight = 0.6,
+                  box.padding = 0.5,
+                  force_pull = 1) + 
+  facet_wrap(~annotation,2,scales = "free")
+
+ggsave("figures_data_n_scripts/RankingRandomTFtargetsLists_termsFACET.png", plot = gg,units = "cm",height = 9, width = 15,dpi = 600, bg = "white")
+# ggsave("figures_data_n_scripts/RankingRandomTFtargetsLists_termsFACET.tiff", plot = gg,units = "cm",height = 9, width = 15,dpi = 600, bg = "white")
+
 

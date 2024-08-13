@@ -87,8 +87,7 @@ masterDF <- masterDF %>% group_by(annotation) %>% mutate(n = n(), x_vals = runif
                        size = factor(size, levels=c(3,10,15,20)))
 
 # Create a new column combining db and method for coloring
-masterDF <- masterDF %>%
-  mutate(db_method = paste(db, method, sep = "_"))
+masterDF <- masterDF %>%  mutate(db_method = paste(db, method, sep = "_"))
 
 # Generate the color palette using colorspace functions
 generate_colors <- function(base_colors, method_levels) {
