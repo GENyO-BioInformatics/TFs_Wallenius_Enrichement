@@ -160,18 +160,18 @@ terms = list(set(annTable.annotation_id))
 
 if method == "tfs":
     pvals_TFsFisher = tf_fisher(annTable, tfs, tfsUniverse)
-    pvals_TFsFisher = [pvals_TFsFisher[key] if key in pvals_TFsFisher else 1 for key in terms]
+    pvals_TFsFisher = [pvals_TFsFisher[key] if key in pvals_TFsFisher else None for key in terms]
     results = pd.DataFrame({'term':terms,'pvals_TFsFisher':pvals_TFsFisher, "annotation": annotation, "k": len(tfs)})
     results.to_csv(out, sep = "\t", index = None)
 
 elif method == "targetsF":
     pvals_targetsFisher = target_fisher(annTable, tfs, targetsTFsUniverse, collectriDB)
-    pvals_targetsFisher = [pvals_targetsFisher[key] if key in pvals_targetsFisher else 1 for key in terms]
+    pvals_targetsFisher = [pvals_targetsFisher[key] if key in pvals_targetsFisher else None for key in terms]
     results = pd.DataFrame({'term':terms,'pvals_targetsFisher':pvals_targetsFisher, "annotation": annotation, "k": len(tfs)})
     results.to_csv(out, sep = "\t", index = None)
 
 elif method == "targetsW":
   pvals_targetsWallenius = target_wallenius(annTable, tfs, targetsTFsUniverse, collectriDB)
-  pvals_targetsWallenius = [pvals_targetsWallenius[key] if key in pvals_targetsWallenius else 1 for key in terms]
+  pvals_targetsWallenius = [pvals_targetsWallenius[key] if key in pvals_targetsWallenius else None for key in terms]
   results = pd.DataFrame({'term':terms,'pvals_targetsWallenius':pvals_targetsWallenius, "annotation": annotation, "k": len(tfs)})
   results.to_csv(out, sep = "\t", index = None)
