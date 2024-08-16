@@ -21,7 +21,7 @@ def getGAModds(lens,DEs):
         y = numpy.insert(y,0,0)
     x = numpy.array([[x1] for x1 in x])
     y = numpy.array([[y1] for y1 in y])
-    gam = LogisticGAM(s(0,n_splines=6,spline_order=3,constraints='monotonic_inc')).fit(x,y)
+    gam = LogisticGAM(s(0,n_splines=6,spline_order=3,constraints='monotonic_inc'), verbose=False).fit(x,y)
     probs = gam.predict_proba(newX)
     return(probs)
 

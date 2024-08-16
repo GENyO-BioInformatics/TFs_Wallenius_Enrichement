@@ -4,81 +4,52 @@ This universe is understood as the set of TFs that at least each one targets one
 of the genes in the annotation db. See script figure_collectriAnnotationsCommonUniverse
 and their resulting VennDiagrams in ./figures_data_n_scripts
 "
+
+library(glue)
+
 sizes <- c(3, 10, 15, 20); size <- sizes[1]
 set.seed(9)
 
 outdir <- 'data/dbs_universes'
 dir.create(outdir,showWarnings = F)
 
-collectriTFsGRN <- read.delim('data/collectri_raw.tsv',header = T,sep = '\t')
-statisticsDF <- c("BaseUniverse","Collectri",length(unique(collectriTFsGRN$source)),
-                  length(unique(collectriTFsGRN$target)),nrow(collectriTFsGRN))
-annotationFiles <- c('data/GO_BP.tsv', 'data/KEGG.tsv', 'data/Reactome.tsv', 'data/WikiPathways.tsv')
-annotationFile <- annotationFiles[1]
+annotations <- c("KEGG","GO_BP","Reactome","WikiPathways"); annotation <- annotations[1]
 
-for (annotationFile in annotationFiles){
-  annotation <- gsub('.tsv','',basename(annotationFile))
-  print(annotationFile)
-  
+organism <- 9606
+collectri_raw_file <- glue("data/collectri_{organism}.tsv")
+if (!file.exists(collectri_raw_file)){
+  system("Rscript download_data.R")
+}
+collectriTFsGRN <- read.delim(collectri_raw_file,header = T,sep = '\t')
+
+for (annotation in annotations){
+  annotationFile <- glue("data/{annotation}.tsv")
   annotationDF <- read.delim(annotationFile,header = T,sep = '\t')
-  annotationDF <- annotationDF[annotationDF$organism == 9606,]
+  annotationDF <- annotationDF[annotationDF$organism == organism,]
   
-  ### GET SUBSET OF COLLECTRI TFs THAT ARE ANNOTATED IN DB,
-  ### THE SET OF TFs FROM HERE MUST BE USED TO LIMIT THE ANNOTATION DBs
-  ### WHEN TESTING DIRECTLY THE TFs ANNOTATIONS
-  subCollectri <- collectriTFsGRN[collectriTFsGRN$source_genesymbol %in% annotationDF$symbol,] 
-  statisticsDF <- rbind(statisticsDF,cbind("TFsUniverse",annotation,length(unique(subCollectri$source_genesymbol)),
-                                           length(unique(subCollectri$target_genesymbol)),nrow(subCollectri)))
-  collectriNannotDB_TFsUniverse <- unique(subCollectri$source_genesymbol)
+  collectriNannotDB <- glue("data/dbs_universes/TFs_universe_{annotation}_{organism}.txt")
+  if (!file.exists(collectriNannotDB)){
+    tfs <- c("IRF1","IRF2")
+    write.table(tfs, file = "tfs.txt", row.names = F, quote = F, col.names = F)
+    system(glue("python TFsEnrichment.py -ann {annotation} -tfs tfs.txt -m tfs"))
+  }
   
-  TFsOutfile <- gsub('.tsv','-TFs_universe.txt',gsub('data','data/dbs_universes',annotationFile))
-  write(collectriNannotDB_TFsUniverse,TFsOutfile,sep = '\n')
+  collectriNannotDB_TFsUniverse <- unique(read.delim(collectriNannotDB, header = F)[,1])
+  collectriNannotDB_TFsUniverse <- collectriNannotDB_TFsUniverse[collectriNannotDB_TFsUniverse %in% collectriTFsGRN$tf & collectriNannotDB_TFsUniverse %in% annotationDF$symbol]
+  collectriNannotDB <- glue("data/dbs_universes/TFs-Targets_universe_{annotation}_{organism}.txt")
+  collectriNannotDB_TFsTargetsUniverse <- unique(read.delim(collectriNannotDB, header = F)[,1])
   
-  
-  ### GET SUBSET OF COLLECTRI WHOSE TARGETS THAT ARE IN THE ANNOTATION DB
-  subCollectri <- collectriTFsGRN[collectriTFsGRN$target_genesymbol %in% annotationDF$symbol,] 
-  length(unique(subCollectri$target_genesymbol))
-  statisticsDF <- rbind(statisticsDF,cbind("TargetsUniverse",annotation,length(unique(subCollectri$source_genesymbol)),
-                                           length(unique(subCollectri$target_genesymbol)),nrow(subCollectri)))
-  
-  ### THE SET OF TFs FROM HERE MUST BE USED FOR THE RANDOM LISTS OF TFs TO
-  ### PERFORM THE TEST BASED ON TARGETS
-  collectriNannotDB_TFsTargetsUniverse <- unique(subCollectri$source_genesymbol)
-  annotation <- gsub('.tsv','',basename(annotationFile))
-  TFsTargetsUniverseOutfile <- gsub('.tsv','-TFsTargets_universe.txt',gsub('data','data/dbs_universes',annotationFile))
-  write(collectriNannotDB_TFsTargetsUniverse,TFsTargetsUniverseOutfile,sep = '\n')
-
-  ### THE SET OF COLLECTRI TARGETS FROM HERE MUST BE USED TO LIMIT THE ANNOTATION DBs
-  ### AND THEN THE COLLECTRI UNIVERSE WHEN TESTING VIA TARGET GENES
-  collectriNannotDB_TargetsTFsUniverse <- unique(subCollectri$target_genesymbol)
-  annotation <- gsub('.tsv','',basename(annotationFile))
-  TargetsTFsUniverseOutfile <- gsub('.tsv','-TargetsTFs_universe.txt',gsub('data','data/dbs_universes',annotationFile))
-  write(collectriNannotDB_TargetsTFsUniverse,TargetsTFsUniverseOutfile,sep = '\n')
-
   for (size in sizes){
-    randomOutdir <- paste0('data/TFsLists/',annotation,'/size',size)
+    randomOutdir <- paste0('random_lists_analysis/TFsLists/',annotation,'/size',size)
     dir.create(randomOutdir,recursive = T,showWarnings = F)
     for (n in 1:1000){
-      TFsAnnoted <- sample(collectriNannotDB_TFsUniverse,size=size,replace = T)
+      TFsAnnoted <- sample(collectriNannotDB_TFsUniverse,size=size)
       write.table(TFsAnnoted, file = paste0(randomOutdir,'/',n,'_TFsAnnoted.txt'),
                   sep = '\t', row.names = F, col.names = F,quote = F)
-
-      TFsTargetsAnnoted <- sample(collectriNannotDB_TFsTargetsUniverse,size=size,replace = T)
+      
+      TFsTargetsAnnoted <- sample(collectriNannotDB_TFsTargetsUniverse,size=size)
       write.table(TFsTargetsAnnoted, file = paste0(randomOutdir,'/',n,'_TFsTargetsAnnoted.txt'),
                   sep = '\t', row.names = F, col.names = F,quote = F)
     }
   }
 }
-
-statisticsDF <- as.data.frame(statisticsDF)
-colnames(statisticsDF) <- c('UniverseLevel','Annnotation','TFs','Targets','Interactions')
-write.table(statisticsDF,file.path(outdir,"statistics.tsv"),sep = '\t',row.names = F,col.names = T, quote = F)
-
-
-### CURRENT ISSUES
-## 1
-# In Collectri some TFs are noted as Complexes
-# This are not annotated as such in functional databases
-# Since random TFs are picked from collectri some TFs will not be analysed
-# in the first approach
-
