@@ -7,6 +7,6 @@ venv/
 *.log
 *.csv
 *.txt
-
+*.zip
 
 
