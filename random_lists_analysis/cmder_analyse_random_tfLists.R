@@ -95,16 +95,21 @@ res <- lapply(annotations, function(ann) {
                     pattern = "TFsAnnoted.txt",
                     full.names = T)
     
-    chunks <- split(x, ceiling(seq_along(x)/15))
-    done <- 0
-    total <- length(x)
+    # check if final files exist
     end_files <- gsub("TFsAnnoted","MergedRes",x)
-    if (!all(file.exists(end_files))){
-      res <- pblapply(chunks, function(x_sub){
-        message(glue("\t\t{done} files processed from {total}"))
-        res <- mclapply(x_sub, analyze_file, ann = ann, mc.cores = 15)
-        done <<- done + 15
-      }) 
+    if (!all(file.exists(end_files))){ # if not: we need to launch code to each file
+      # divide 1000 files in 10 chunks of 100 files each one
+      chunks <- split(x, rep_len(1:10, length(x)))
+      # each chunk will be processed in a lapply
+      # this will show a progress bar of each 100 files
+      res <- pblapply(chunks, function(y){
+        # divide 100 files in 15 chunks
+        sub_chunks <- split(y, rep_len(1:15, length(y)))
+        # launch each sub chunk with mclapply
+        res <- mclapply(sub_chunks, function(z){
+          res <- lapply(z, analyze_file, ann = ann)
+        }, mc.cores = 15)
+      })
     }
   })
 })

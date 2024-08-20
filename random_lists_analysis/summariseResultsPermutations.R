@@ -29,14 +29,13 @@ masterSummaryDF <- lapply(1:nrow(annotNsize), function(idx){
     message("\t\tCalculating Ranks")
     masterDF <- rbindlist(mclapply(chunks, function(x_sub){
       masterDF <- rbindlist(lapply(x_sub, function(resultsFile){
-        results <- vroom(resultsFile)
+        results <- vroom(resultsFile) %>% na.omit()
         results <- results %>%
           mutate(rankTFs = rank(pvals_TFsFisher),
                  rankTargetsF = rank(pvals_targetsFisher),
                  rankTargetsW = rank(pvals_targetsWallenius))
         results <- results %>% select(term, annotation, k, pvals_TFsFisher, rankTFs, pvals_targetsFisher, rankTargetsF, pvals_targetsWallenius, rankTargetsW)
       }))
-      done <<- done + 15
       return(masterDF)
     }, mc.cores = 15))
     message("\t\tCalculating Stats")
