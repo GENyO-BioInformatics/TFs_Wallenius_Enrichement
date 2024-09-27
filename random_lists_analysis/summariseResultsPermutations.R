@@ -29,7 +29,7 @@ masterSummaryDF <- lapply(1:nrow(annotNsize), function(idx){
     message("\t\tCalculating Ranks")
     masterDF <- rbindlist(mclapply(chunks, function(x_sub){
       masterDF <- rbindlist(lapply(x_sub, function(resultsFile){
-        results <- vroom(resultsFile) %>% na.omit()
+        results <- vroom(resultsFile)
         results <- results %>%
           mutate(rankTFs = rank(pvals_TFsFisher),
                  rankTargetsF = rank(pvals_targetsFisher),
@@ -53,6 +53,16 @@ masterSummaryDF <- lapply(1:nrow(annotNsize), function(idx){
                 Q1rTargetsW = quantile(rankTargetsW, 0.25), # Q1 ranking according to Targets by Wallenius
                 Q3rTargetsW = quantile(rankTargetsW, 0.75)) %>% # Q3 ranking according to Targets by Wallenius
       mutate(annotation = db, size = size)
+    statsMasterDF <- statsMasterDF %>% mutate(rTFs = ifelse(is.na(pTFs),NA,rTFs),
+                                              Q1rTFs = ifelse(is.na(pTFs),NA,Q1rTFs),
+                                              Q3rTFs = ifelse(is.na(pTFs),NA,Q3rTFs),
+                                              rTargetsF = ifelse(is.na(pTargetsF),NA,rTargetsF),
+                                              Q1rTargetsF = ifelse(is.na(pTargetsF),NA,Q1rTargetsF),
+                                              Q3rTargetsF = ifelse(is.na(pTargetsF),NA,Q3rTargetsF),
+                                              rTargetsW = ifelse(is.na(pTargetsW),NA,rTargetsW),
+                                              Q1rTargetsW = ifelse(is.na(pTargetsW),NA,Q1rTargetsW),
+                                              Q3rTargetsW = ifelse(is.na(pTargetsW),NA,Q3rTargetsW))
+    
     message(glue("\t\tWriting file {statisticsOutFile}"))
     write.table(statsMasterDF, statisticsOutFile, sep='\t',quote = F,row.names = F,col.names = T)
     et <- Sys.time()
