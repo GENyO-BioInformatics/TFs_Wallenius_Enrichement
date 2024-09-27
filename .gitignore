@@ -11,4 +11,4 @@ venv/
 *.Rhistory
 lib/__pycache__/
 *.tar.gz
-
+*__pycache__
