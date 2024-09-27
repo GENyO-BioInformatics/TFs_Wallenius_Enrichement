@@ -15,14 +15,14 @@ parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFo
 # python TFsEnrichment.py -ann KEGG -tfs tfs.txt -out out.txt -m targetsW
 parser.add_argument("-org", "--organism", type=int, help="select tax id: 9606 for human and 10090 for mouse", default=9606)
 parser.add_argument("-ann", "--annotation", type=str, help="select annotation to use", default="GO_BP")
-parser.add_argument("-out", "--output", type=str, help="output file", default="out.txt")
+parser.add_argument("-out", "--output", type=str, help="output file", default="out.tsv")
 parser.add_argument("-tfs", "--tfs", type=str, help="text file with TFs", required=True)
-parser.add_argument("-m", "--method", type=str, help="select method to use: tfs, targetsF, targetsW", default="targetsW")
+parser.add_argument("-m", "--method", type=str, help="select method to use: tfsF, targetsF, targetsW", default="targetsW")
 args = parser.parse_args()
 config = vars(args)
 
 tfsFile = config["tfs"]
-out = config["output"]
+out = config["output"]; os.makedirs(os.path.dirname(out),exist_ok = True) 
 annotation = config["annotation"]
 organism = config["organism"]
 method = config["method"]
@@ -91,7 +91,6 @@ def prepare_universe(organism, annTable, tfsUniverse, tfsTargetsUniverse, target
         f.write('\n'.join(subcollectri_targets))
 
     
-
 if not os.path.exists(tfsUniverse) or not os.path.exists(targetsTFsUniverse) or not os.path.exists(tfsTargetsUniverse):
     print(f"Preparing universe database. It will take a while but it will only be done once.")
     prepare_universe(organism, annTable, tfsUniverse, tfsTargetsUniverse, targetsTFsUniverse)
@@ -158,7 +157,7 @@ def target_wallenius(annTable, tfs, targetsTFsUniverse, collectriDB):
 
 terms = list(set(annTable.annotation_id))
 
-if method == "tfs":
+if method == "tfsF":
     pvals_TFsFisher = tf_fisher(annTable, tfs, tfsUniverse)
     pvals_TFsFisher = [pvals_TFsFisher[key] if key in pvals_TFsFisher else None for key in terms]
     results = pd.DataFrame({'term':terms,'pvals_TFsFisher':pvals_TFsFisher, "annotation": annotation, "k": len(tfs)})
@@ -175,3 +174,5 @@ elif method == "targetsW":
   pvals_targetsWallenius = [pvals_targetsWallenius[key] if key in pvals_targetsWallenius else None for key in terms]
   results = pd.DataFrame({'term':terms,'pvals_targetsWallenius':pvals_targetsWallenius, "annotation": annotation, "k": len(tfs)})
   results.to_csv(out, sep = "\t", index = None)
+  
+print("Analysis Finished")  

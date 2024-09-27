@@ -3,8 +3,9 @@
 This plot answers the questions:
 1- How is the distribution of targets per annotation? 
 2- How is the distribution of TFs per annotation?
-
 "
+currentScriptDir <- dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(file.path(currentScriptDir,".."))
 
 library(vroom)
 library(ggplot2)
@@ -16,7 +17,34 @@ library(ggdist)
 library(colorspace)
 library(ggrepel)
 
-TFsNtargets <- read.delim("../observations/TFsPerTargetdf.tsv")
+################################################################################
+### 1 GENERATE DATA FOR PLOT
+################################################################################
+### CollecTri TF - Target Distribution - Per Annotation DB
+
+collectriTFsGRN <- read.delim('data/collectri_raw.tsv',header = T,sep = '\t')
+annotationFiles <- c('data/GO_BP.tsv', 'data/KEGG.tsv', 'data/Reactome.tsv', 'data/WikiPathways.tsv'); annotationFile <- annotationFiles[1]
+TFsPerTargetdf_full <- c()
+for (annotationFile in annotationFiles){
+  annotation <- gsub('.tsv','',basename(annotationFile))
+  annotationDF <- read.delim(annotationFile,header = T,sep = '\t')
+  annotationDF <- annotationDF[annotationDF$organism == 9606,]
+  collectriTFsGRN_filtered <- collectriTFsGRN[collectriTFsGRN$target_genesymbol %in% annotationDF$symbol,]
+  TFsPerTargetdf <- as.data.frame(table(collectriTFsGRN_filtered$target_genesymbol))
+  colnames(TFsPerTargetdf) <- c('target','numberOfTFsAssociated')
+  TFsPerTargetdf$db <- annotation
+  TFsPerTargetdf_full <- rbind(TFsPerTargetdf_full, TFsPerTargetdf)
+}
+View(TFsPerTargetdf_full)
+
+write.table(TFsPerTargetdf_full, file = 'data/observations/TFsPerTargetdf.tsv',
+            sep = '\t', row.names = F, col.names = T)
+
+################################################################################
+### 2. PLOT DATA
+################################################################################
+
+TFsNtargets <- read.delim("data/observations/TFsPerTargetdf.tsv")
 TFsNtargets$db <- gsub('_',' ',TFsNtargets$db)
 
 boxplot_limits <- function(data) {
@@ -133,6 +161,6 @@ gg <- ggplot(data = TFsNtargets, aes(x = numberOfTFsAssociated)) +
     size = 2
   )
 
-ggsave("collectriTargetsNtfsPerAnnDB.tiff", plot = gg,units = "cm",height = 12, width = 20,dpi = 500,
-       compression = "lzw",bg = "white")
+ggsave("figures_data_n_scripts/collectriTargetsNtfsPerAnnDB.tiff", plot = gg,units = "cm",height = 12, width = 20,dpi = 500, compression = "lzw",bg = "white")
 
+ggsave("figures_data_n_scripts/collectriTargetsNtfsPerAnnDB.png", plot = gg,units = "cm",height = 12, width = 20,dpi = 500, bg = "white")

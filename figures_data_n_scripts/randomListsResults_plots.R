@@ -4,6 +4,8 @@ library(ggrepel)
 library(tidyverse)
 library(colorspace)
 library(cowplot)
+library(stringr)
+swr = function(string, nwrap=50) {paste(strwrap(string, width=nwrap), collapse="\n")}; swr = Vectorize(swr)
 
 currentScriptDir <- dirname(rstudioapi::getSourceEditorContext()$path)
 setwd(file.path(currentScriptDir,".."))
@@ -15,14 +17,13 @@ colors_blind <- c(
   "Reactome" = "#f1b620"
 )
 
-library(stringr)
-swr = function(string, nwrap=50) {paste(strwrap(string, width=nwrap), collapse="\n")}; swr = Vectorize(swr)
 
-masterDF <- read.delim("data/EnrResults/masterSummary.tsv") 
+masterDF <- read.delim("random_lists_analysis/masterSimsResults.tsv") 
 masterDF$annotation <- gsub('_', ' ', masterDF$annotation)
 annotInfo <- read.delim("data/annotation_info_table.tsv")
-masterDF <- merge(annotInfo,masterDF,by.x ="annotation_id",by.y = "terms",all.y = T)
+masterDF <- merge(annotInfo,masterDF,by.x ="annotation_id",by.y = "term",all.y = T)
 
+colnames(masterDF)
 
 # BOX PLOTS VISUALIZATIONS 
 
@@ -30,7 +31,7 @@ masterDF <- merge(annotInfo,masterDF,by.x ="annotation_id",by.y = "terms",all.y 
 masterDF <- masterDF %>% select(
   annotation_id,
   term,
-  TFsTargetsUni_HypergeomCount,
+  pTFs,
   size,
   annotation
 )
@@ -41,12 +42,12 @@ masterDF <- masterDF %>% group_by(annotation) %>% mutate(n = n(), x_vals = runif
   ungroup() %>% mutate(db = factor(annotation, levels = names(colors_blind)),
                        size = factor(size, levels=c(3,10,15,20)))
 
-gg <- ggplot(data = masterDF, aes(y = TFsTargetsUni_HypergeomCount)) +
+gg <- ggplot(data = masterDF, aes(y = pTFs)) +
   geom_point(aes(
     x = as.numeric(factor(size)) + x_vals,
     color = db,
     fill = db,
-    size = TFsTargetsUni_HypergeomCount,
+    size = pTFs,
     alpha = 0.6,
     stroke = 0
   )) +
@@ -73,7 +74,7 @@ gg <- ggplot(data = masterDF, aes(y = TFsTargetsUni_HypergeomCount)) +
   scale_color_manual(values = colors_blind) +
   scale_alpha(guide = 'none')
 
-top_ann <- masterDF %>% arrange(desc(TFsTargetsUni_HypergeomCount)) %>% group_by(db,size) 
+top_ann <- masterDF %>% arrange(desc(pTFs)) %>% group_by(db,size) 
 top_ann <- top_ann %>% mutate(db = factor(db, levels = names(colors_blind))) %>%  mutate(db_numeric = as.numeric(factor(db)))
 
 topToShow <- 3
@@ -107,26 +108,25 @@ ggsave("figures_data_n_scripts/RandomTFsHypergeom_terms.tiff", plot = gg_terms,u
 ggsave("figures_data_n_scripts/RandomTFsHypergeom_terms.png", plot = gg_terms,units = "cm",height = 10, width = 15,dpi = 300)
 
 
-
 # TFs Targets SEA ##############
 
-masterDF <- read.delim("data/EnrResults/masterSummary.tsv") 
+masterDF <- read.delim("random_lists_analysis/masterSimsResults.tsv") 
 masterDF$annotation <- gsub('_', ' ', masterDF$annotation)
 annotInfo <- read.delim("data/annotation_info_table.tsv")
-masterDF <- merge(annotInfo,masterDF,by.x ="annotation_id",by.y = "terms",all.y = T)
+masterDF <- merge(annotInfo,masterDF,by.x ="annotation_id",by.y = "term",all.y = T)
 
 masterDF <- masterDF %>% select(
   annotation_id,
   term,
-  Target_HypergeomCount,
-  Target_NonCentralCount,
+  pTargetsF,
+  pTargetsW,
   size,
   annotation
 )
 
-masterDF <- masterDF %>% pivot_longer(c(Target_HypergeomCount, Target_NonCentralCount), names_to = "method", values_to = "count") %>% 
-  mutate(method = ifelse(method == "Target_HypergeomCount", "Hypergeometric", "Non-Central Hypergeometric"))
-  #mutate(method = ifelse(method == "Target_HypergeomCount", "Fisher's Exact", "Wallenius")) ??? better this ???
+masterDF <- masterDF %>% pivot_longer(c(pTargetsF, pTargetsW), names_to = "method", values_to = "count") %>% 
+  mutate(method = ifelse(method == "pTargetsF", "Hypergeometric", "Non-Central Hypergeometric"))
+  #mutate(method = ifelse(method == "pTargetsF", "Fisher's Exact", "Wallenius")) ??? better this ???
 
 set.seed(343435)
 masterDF <- masterDF %>% group_by(annotation) %>% mutate(n = n(), x_vals = runif(n, -0.1, 0.1)) %>% ungroup() %>% mutate(db = factor(annotation, levels = names(colors_blind)),
@@ -140,7 +140,7 @@ method_levels <- unique(masterDF$method)
 
 ann <- "GO BP"
 topToShow <- 3
-TFstargetsIds <- list()
+#TFstargetsIds <- list()
 TFstargetsTerms <- list()
 for (ann in levels(masterDF$db)){
   masterDF_sub <- masterDF %>% filter(db == ann)
@@ -214,7 +214,7 @@ for (ann in levels(masterDF$db)){
     lineheight = 0.65,
     box.padding = 0.2)
   
-  TFstargetsIds[[ann]] <- gg_ids
+  #TFstargetsIds[[ann]] <- gg_ids
   TFstargetsTerms[[ann]] <- gg_terms
 }
   

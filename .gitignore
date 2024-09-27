@@ -8,5 +8,7 @@ venv/
 *.csv
 *.txt
 *.zip
-
+*.Rhistory
+lib/__pycache__/
+*.tar.gz
 

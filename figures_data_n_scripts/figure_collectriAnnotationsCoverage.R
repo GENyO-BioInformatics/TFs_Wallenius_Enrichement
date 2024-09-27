@@ -7,8 +7,61 @@ This plot answers two questions:
    is covered in function of the evidence level in Collectri TFs?
 "
 
+currentScriptDir <- dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(file.path(currentScriptDir,".."))
 library(vroom)
 library(ggplot2)
+
+################################################################################
+### 1 GENERATE DATA FOR PLOT
+################################################################################
+
+collectriTFsGRN <- read.delim('data/collectri_raw.tsv',header = T,sep = '\t')
+annotationFiles <- c('data/GO_BP.tsv', 'data/KEGG.tsv', 'data/Reactome.tsv', 'data/WikiPathways.tsv'); annotationFile <- annotationFiles[1]
+
+evidences <- c('n_references','curation_effort'); evidence <- evidences[1]
+annotationsCoveragePerEvidence <- c()
+for (evidence in evidences){
+  for (annotationFile in annotationFiles){
+    annotation <- gsub('.tsv','',basename(annotationFile))
+    outfile <- gsub('.tsv',paste0('_CollectriCoverage_',evidence,'.tsv'),annotationFile)
+    outfile <- gsub('data','data/observations',outfile)
+    
+    annotationDF <- read.delim(annotationFile,header = T,sep = '\t')
+    annotationDF <- annotationDF[annotationDF$organism == 9606,]
+    
+    totalAnnotations <- length(unique(annotationDF$annotation_id))
+    for (evidenceScore in sort(unique(collectriTFsGRN[,evidence]))){
+      selection <- which(collectriTFsGRN[,evidence] >= evidenceScore)
+      TFsAccepted <- unique(collectriTFsGRN$source_genesymbol[selection])
+      TargetsAccepted <- unique(collectriTFsGRN$target_genesymbol[selection])
+      nTFsAccepted <- length(TFsAccepted)
+      nTargetsAccepted <- length(TargetsAccepted)
+      TFsAnnotationsInEvidence <- length(unique(annotationDF$annotation_id[annotationDF$symbol %in% TFsAccepted]))
+      TargetsAnnotationsInEvidence <- length(unique(annotationDF$annotation_id[annotationDF$symbol %in% TargetsAccepted]))
+      propor_TFsAnnotationsInEvidence <- TFsAnnotationsInEvidence / totalAnnotations * 100
+      propor_TargetsAnnotationsInEvidence <- TargetsAnnotationsInEvidence / totalAnnotations * 100
+      
+      annotationsCoveragePerEvidence <- rbind(annotationsCoveragePerEvidence,
+                                              cbind(annotation=annotation,
+                                                    evidence = evidence,
+                                                    minEvidenceScore = evidenceScore,
+                                                    nTFsAccepted = nTFsAccepted, 
+                                                    TFsAnnotationsInEvidence = TFsAnnotationsInEvidence,
+                                                    propor_TFsAnnotationsInEvidence = propor_TFsAnnotationsInEvidence,
+                                                    nTargetsAccepted = nTargetsAccepted,
+                                                    TargetsAnnotationsInEvidence = TargetsAnnotationsInEvidence,
+                                                    propor_TargetsAnnotationsInEvidence= propor_TargetsAnnotationsInEvidence))
+    }
+  }
+}
+write.table(annotationsCoveragePerEvidence, file = 'data/observations/annotationsCoveragePerEvidence.tsv' ,sep = '\t',
+            row.names = F, col.names = T)
+View(annotationsCoveragePerEvidence)
+
+################################################################################
+### 2. PLOT DATA
+################################################################################
 
 annotationsCoveragePerEvidence <- vroom("data/observations/annotationsCoveragePerEvidence.tsv")
 annotationsCoveragePerEvidence$annotation <- gsub('_',' ',annotationsCoveragePerEvidence$annotation)
@@ -46,11 +99,10 @@ coveragePlot <- ggplot(byCuration_effortDF,
         legend.key = element_rect(fill = "white"),
         plot.margin = margin(l = 0, unit = "cm"))+
   ylab("Annotation coverage (%)")+
-  xlab("Evidence Level") +
+  xlab("Curation Effort") +
   labs(fill = "Annotation")
 
-coveragePlot
+ggsave("figures_data_n_scripts/figure_collectriAnnotationsCoverage.tiff", plot = coveragePlot,units = "cm",height = 6, width = 8,dpi = 500, compression = "lzw",bg = "white")
 
-ggsave("figure_collectriAnnotationsCoverage.tiff", plot = coveragePlot,units = "cm",height = 6, width = 8,dpi = 500,
-       compression = "lzw",bg = "white")
+ggsave("figures_data_n_scripts/figure_collectriAnnotationsCoverage.png", plot = coveragePlot,units = "cm",height = 6, width = 8,dpi = 500, bg = "white")
 
