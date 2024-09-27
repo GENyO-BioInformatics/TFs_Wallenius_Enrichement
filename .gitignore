@@ -8,5 +8,5 @@ venv/
 *.csv
 *.txt
 *.zip
-
+*__pycache__
 
