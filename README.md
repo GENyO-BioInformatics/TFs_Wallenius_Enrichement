@@ -6,15 +6,57 @@ This github repository contains all the information necessary to perform and exh
 
 ## Setup  (install dependencies) 
 
-requirements.in (python dependencies) 
-R_requirements.in (r dependencies) 
+### Download and install conda
+
+First, download conda if you don't have it. We recommend to use Miniconda because it requires less space.
+
+```bash
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh # for linux users
+chmod +x Miniconda3-latest-Linux-x86_64.sh
+./Miniconda3-latest-Linux-x86_64.sh
+```
+Answer the questions and open new terminal, then write:
+
+```bash
+conda config --add channels defaults
+conda config --add channels conda-forge
+conda config --add channels bioconda
+conda config --set channel_priority flexible
+conda install -n base -c defaults conda
+conda config --set solver libmamba
+conda update -n base -c defaults conda
+```
+
+This commands are used to properly configurate conda with the more useful channels and the solver libmamba. In addition we ensure that conda is up to date.
+
+### Create conda environment
+
+We will use [tf_bias.yml](tf_bias.yml) file to create the conda environment.
+
+```bash
+conda env create -f tf_bias.yml
+```
+
+### Activate conda environment
+
+To activate conda environment we use the following command:
+
+```bash
+conda activate tf_bias
+```
+
+To deactivate conda environment we use the following command:
+
+```bash
+conda deactivate
+```
 
 ## Data
 
-The data folder contains the base files necessary to carry out this bioinformatics research. 
+The data folder contains the base files necessary to carry out this bioinformatics research. Run to obtain or update the necessary files. Remember to activate conda environment. R and neccesary packages are installed through the conda environment.
 
-```r
-# Run to obtain or update the necessary files
+```bash
+conda activate tf_bias
 Rscript download_data.R
 ```
 
