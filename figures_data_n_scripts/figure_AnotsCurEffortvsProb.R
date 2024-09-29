@@ -6,6 +6,9 @@ library(stringr)
 library(smplot2)
 library(ggrepel)
 library(ggpubr)
+library(vroom)
+library(stringr)
+swr = function(string, nwrap=50) {paste(strwrap(string, width=nwrap), collapse="\n")}; swr = Vectorize(swr)
 
 
 ################################################################################
@@ -114,6 +117,15 @@ if(nrow(annotationsCurationEffortStats) != nrow(annotationsSelectionProbs)){
 }
 
 annotationsCollectriStats <- merge(annotationsCurationEffortStats,annotationsSelectionProbs)
+ann_info <- vroom("data/annotation_info_table.tsv")
+
+annotationsCollectriStats <- merge(ann_info,annotationsCollectriStats,all.y = T)
+
+#ann_info <- rbind(ann_info,c("GO:0042493","response to xenobiotic stimulus"))
+
+
+View(annotationsCollectriStats)
+
 # Selected
 curationEfforCol <- "targets_sum_curation_effort"
 
@@ -122,23 +134,23 @@ mylabel_x <- min(annotationsCollectriStats[,curationEfforCol],na.rm = T)
 nLabels <- 20
 maxProbsToLabel_prob <- annotationsCollectriStats$probability[order(annotationsCollectriStats$probability,decreasing = T)][nLabels]
 selectedToLabel <- annotationsCollectriStats$probability >= maxProbsToLabel_prob
-
+set.seed(999)
 myPlot <- ggplot(data = annotationsCollectriStats, 
        mapping = aes(x = .data[[curationEfforCol]], y = probability,
-                     label = annotation_id)) +
-  geom_point(shape = 21, fill='grey', color = "white",stroke=0.1, size = .5) + 
+                     label = swr(term,30))) +
+  geom_point(aes(color = annotation), shape = 20, fill='grey', stroke=0.1, size = 1) + 
   sm_statCorr(color = "black", corr_method = "pearson", linetype = "dashed", R2 = TRUE,
-              separate_by = ", ", size=0.2, text_size = 2,
+              separate_by = ", ", size=0.2, text_size = 6,
               label_x = mylabel_x, label_y = 0.98)+
   ylim(0,1)+
   geom_text_repel(data=subset(annotationsCollectriStats, selectedToLabel),
                   aes(x = .data[[curationEfforCol]], y = probability, color = annotation),
-                  size = 1, min.segment.length=0.1, max.overlaps=20, force_pull=2, force=0.1,
+                  size = 3.5, min.segment.length=0.1, max.overlaps=20, force_pull=2, force=0.1,
                   segment.linetype = 3, segment.size=0.05) + 
   scale_color_manual(values = colors_blind)+
   theme(panel.background = element_blank(),
-        axis.title = element_text(size = 5),
-        axis.text = element_text(size = 4),
+        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10),
         legend.title = element_text(size = 4),
         legend.text = element_text(size = 4),
         legend.key.size = unit(0.2,"cm"),
@@ -147,8 +159,8 @@ myPlot <- ggplot(data = annotationsCollectriStats,
   ylab("Annotation Probability")+
   xlab("Targets Total Curation Effort")
 
-ggsave("figures_data_n_scripts/figure_AnotsCurEffortvsProb.png", plot = myPlot, units = "cm",height = 6, width = 8,dpi = 300, bg = "white")
-ggsave("figures_data_n_scripts/figure_AnotsCurEffortvsProb.tiff", plot = myPlot, units = "cm",height = 6, width = 8,dpi = 500, compression = "lzw",bg = "white")
+ggsave("figures_data_n_scripts/figure_AnotsCurEffortvsProb.png", plot = myPlot, units = "cm",height = 20, width = 30, dpi = 300, bg = "white")
+ggsave("figures_data_n_scripts/figure_AnotsCurEffortvsProb.tiff", plot = myPlot, units = "cm",height = 15, width = 15,dpi = 500, compression = "lzw",bg = "white")
 
 
 # curationEfforCols <- colnames(annotationsCollectriStats)[grep("effort",colnames(annotationsCollectriStats))]
