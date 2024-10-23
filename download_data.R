@@ -13,7 +13,9 @@ organism <- opt$organism
 
 
 ##############################
+## CollecTRI
 ##############################
+
 
 ## Fetch Data Clean and Save TF-Target Data
 # dorotheaTFsGRN <- OmnipathR::dorothea(organism=9606, genesymbols=TRUE, loops=TRUE)
@@ -26,3 +28,17 @@ collectriTFsGRN_clean <- data.frame(tf = collectriTFsGRN$source_genesymbol, targ
 
 write.table(collectriTFsGRN, file = glue("data/collectri_raw_{organism}.tsv"), sep = "\t", row.names = F, col.names = T)
 write.table(collectriTFsGRN_clean, file = glue("data/collectri_{organism}.tsv"), sep = "\t", row.names = F, col.names = T)
+
+
+##############################
+## Annotation Databases
+##############################
+
+annotations <- c("KEGG","GO_BP","WikiPathways","Reactome")
+endpoint <- "https://genecodis.genyo.es/gc4/database?"
+organism <- "9606"
+for (annotation in annotations){
+  query <- paste0(endpoint,"annotation=",annotation,"&nomenclature=symbol&organism=",organism)
+  print(query)
+  system(paste0("wget '",query,"' -O ",annotation,".tsv"))
+}

@@ -24,21 +24,18 @@ simulationsResultsDF <- read.delim(dataFile)
 simulationsResultsDF$annotation <- gsub("_"," ",simulationsResultsDF$annotation)
 colnames(simulationsResultsDF)[1] <- "annotation_id"
 
-dataFile <- 'data/observations/annotationsCurationEffortStats.tsv'
-annotationsCurationEffortStats <- read.delim(dataFile)
-annotationsCurationEffortStats$annotation <- gsub("_"," ",annotationsCurationEffortStats$annotation)
-nrow(annotationsCurationEffortStats)
+dataFile <- 'data/observations/probabilities.csv'
+annotationsSelectionProbs <- read.delim(dataFile,sep = ',')
+annotationsSelectionProbs$probability
 
 ann_info <- vroom("data/annotation_info_table.tsv")
 ann_info <- rbind(ann_info,c("GO:0042493","response to xenobiotic stimulus"))
 
-fullStatsDF <- merge(ann_info, merge(annotationsCurationEffortStats,
+fullStatsDF <- merge(ann_info, merge(annotationsSelectionProbs,
                                      simulationsResultsDF))
 
-totalAnnotationPerDB <- table(simulationsResultsDF[simulationsResultsDF$size == "10",]$annotation)
-
 simulationStats <- c("pTargetsF","pTargetsW")
-curationStats <- c("targets_sum_curation_effort")
+probabilityStats <- c("probability")
 
 # myX <- "rTargetsW"; myY <- "tfs_sum_curation_effort"; size <- "20"
 
@@ -48,7 +45,7 @@ set.seed(9998)
 myplots <- list()
 mySizes <- sort(unique(fullStatsDF$size))
 for (size in mySizes){
-  for (myX in curationStats){
+  for (myX in probabilityStats){
     for (myY in simulationStats){
       plotname <- paste0(myY,myX,size)
       print(plotname)
@@ -57,10 +54,6 @@ for (size in mySizes){
       mylabel_y <- max(subsetDF[,myY],na.rm = T) * 0.1
       my_ylim <- max(subsetDF[,myY],na.rm = T)
       my_xlim <- max(subsetDF[,myX],na.rm = T)
-      tag <- ""
-      # maxProbsToLabel <- sort(subsetDF[,myY],decreasing = T)[nLabels]
-      # selectedToLabel <- subsetDF[,myY] >= maxProbsToLabel
-      # print(sum(selectedToLabel))
 
       myplots[[plotname]] <- ggplot(data = subsetDF,
                        mapping = aes(x = .data[[myX]], y = .data[[myY]],
@@ -88,13 +81,11 @@ for (size in mySizes){
   }
 }
 
-args <- c(myplots, list(ncol = 2, bottom = text_grob("Annotation TF-Targets Total Evidence Sources", size=12, face = 'bold'),
-                                  top = text_grob(paste0("Fisher",paste(rep(" ",80),collapse = ""),"Wallenius"), size=12, face = 'bold'),
-                        left = text_grob("Frequency(p-value < 0.05)", size=12, face = 'bold', rot = 90)))
+args <- c(myplots, list(ncol = 2, bottom = text_grob("Theoretical probability", size=12, face = 'bold'),
+                                  top = text_grob(paste0("Fisher",paste(rep(" ",100),collapse = ""),"Wallenius"), size=12, face = 'bold'),
+                                  left = text_grob("Frequency(p-value < 0.05)", size=12, face = 'bold', rot = 90)))
 
-
-
-outName <- paste0("figures_data_n_scripts/figure_corrPermutsVScuration.png") 
+outName <- paste0("figures_data_n_scripts/figure_corrPermutsVSprobs.png") 
 ggsave(outName, plot = do.call(grid.arrange, args), units = "cm",height = 27, width = 22, dpi = 300, bg = "white")
 
 

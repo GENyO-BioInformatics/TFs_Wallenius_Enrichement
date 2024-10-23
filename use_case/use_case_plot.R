@@ -139,7 +139,7 @@ for (use_case in unique(subSelection$use_case)){
          units = "cm",height = 15, width = 20,
          dpi = 500, compression = "lzw", bg = "white")
   
-  ggsave(paste0("figures_data_n_scripts/",use_case,"_UseCase.png"), 
+  ggsave(paste0("use_case/",use_case,"_UseCase.png"), 
          plot = plot_grid(plotlist = plotList, nrow = 2),
          units = "cm",height = 15, width = 20,
          dpi = 500, bg = "white")
